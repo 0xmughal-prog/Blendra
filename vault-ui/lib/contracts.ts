@@ -1,4 +1,4 @@
-import vaultABI from './contracts/GBPYieldVaultV2SecureABI.json';
+import minterABI from './contracts/GBPbMinterABI.json';
 import erc20ABI from './contracts/IERC20ABI.json';
 
 // Contract addresses on Arbitrum Mainnet (from DEPLOYMENT_COMPLETE.md)
@@ -12,7 +12,7 @@ export const CONTRACTS = {
   sGBPb: '0xC388c87F3f983111C02375C956ed3f0BA6B5b18c' as const,
 };
 
-export const VAULT_ABI = vaultABI;
+export const VAULT_ABI = minterABI;
 export const ERC20_ABI = erc20ABI;
 
 // Chain ID for Arbitrum Mainnet
