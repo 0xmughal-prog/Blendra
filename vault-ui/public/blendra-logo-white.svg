@@ -1,0 +1,9 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blendra Logo Mark: White Version for Dark Backgrounds -->
+
+  <!-- All stripes in white with opacity variations -->
+  <path d="M 25 85 L 60 50 L 60 65 L 40 85 Z" fill="#FFFFFF" opacity="0.6"/>
+  <path d="M 35 75 L 70 40 L 85 55 L 50 90 L 40 85 L 60 65 Z" fill="#FFFFFF" opacity="0.8"/>
+  <path d="M 50 60 L 85 25 L 95 35 L 70 60 L 85 55 L 70 40 Z" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M 70 40 L 95 15 L 105 25 L 85 45 L 95 35 L 85 25 Z" fill="#FFFFFF" opacity="1"/>
+</svg>

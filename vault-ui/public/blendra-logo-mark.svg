@@ -1,0 +1,41 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blendra Logo Mark: Angular Chevron with Gradient Stripes -->
+  <defs>
+    <linearGradient id="blendraGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A2F45;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2B4F6D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5A9FD6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="blendraGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2B4F6D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5A9FD6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="blendraGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5A9FD6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A8CFED;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Bottom stripe (darkest) -->
+  <path d="M 25 85 L 60 50 L 60 65 L 40 85 Z" fill="url(#blendraGradient1)" opacity="0.95">
+    <animate attributeName="opacity" values="0.95;1;0.95" dur="3s" repeatCount="indefinite" />
+  </path>
+
+  <!-- Middle stripe -->
+  <path d="M 35 75 L 70 40 L 85 55 L 50 90 L 40 85 L 60 65 Z" fill="url(#blendraGradient2)" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.95;0.9" dur="3s" begin="0.5s" repeatCount="indefinite" />
+  </path>
+
+  <!-- Top stripe (lightest) -->
+  <path d="M 50 60 L 85 25 L 95 35 L 70 60 L 85 55 L 70 40 Z" fill="url(#blendraGradient3)" opacity="0.85">
+    <animate attributeName="opacity" values="0.85;0.9;0.85" dur="3s" begin="1s" repeatCount="indefinite" />
+  </path>
+
+  <!-- Top accent piece -->
+  <path d="M 70 40 L 95 15 L 105 25 L 85 45 L 95 35 L 85 25 Z" fill="url(#blendraGradient3)">
+    <animate attributeName="opacity" values="0.8;0.9;0.8" dur="3s" begin="1.5s" repeatCount="indefinite" />
+  </path>
+
+  <!-- Rounded corners -->
+  <rect width="120" height="120" fill="none" rx="3"/>
+</svg>

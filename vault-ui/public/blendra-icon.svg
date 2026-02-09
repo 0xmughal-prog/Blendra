@@ -1,0 +1,50 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blendra App Icon: Simplified Angular Chevron -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A2F45;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2B4F6D;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2B4F6D;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#5A9FD6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A8CFED;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5A9FD6;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#A8CFED;stop-opacity:1" />
+    </linearGradient>
+    <!-- Grain texture for premium feel -->
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="1" />
+      <feColorMatrix type="saturate" values="0" />
+      <feBlend mode="overlay" in="SourceGraphic" />
+    </filter>
+  </defs>
+
+  <!-- Background with gradient -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGradient)"/>
+
+  <!-- Subtle grain overlay -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGradient)" opacity="0.03" filter="url(#grain)"/>
+
+  <!-- Main chevron shape - 3 diagonal stripes forming upward arrow -->
+
+  <!-- Bottom/back stripe (darkest) -->
+  <path d="M 120 380 L 256 244 L 256 304 L 160 400 Z"
+        fill="#2B4F6D"
+        opacity="0.8"/>
+
+  <!-- Middle stripe -->
+  <path d="M 140 340 L 300 180 L 360 240 L 200 400 L 160 380 L 256 284 Z"
+        fill="url(#iconGradient1)"/>
+
+  <!-- Top stripe (lightest, most prominent) -->
+  <path d="M 200 280 L 360 120 L 420 180 L 300 300 L 360 240 L 300 180 Z"
+        fill="url(#iconGradient2)"/>
+
+  <!-- Top accent piece (tip of arrow) -->
+  <path d="M 300 180 L 420 60 L 460 100 L 360 200 L 420 140 L 360 80 Z"
+        fill="#A8CFED"
+        opacity="0.9"/>
+</svg>

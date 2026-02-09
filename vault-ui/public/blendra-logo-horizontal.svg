@@ -1,0 +1,28 @@
+<svg width="200" height="50" viewBox="0 0 200 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blendra Horizontal Logo: Mark + Wordmark -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A2F45;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2B4F6D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5A9FD6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Logo Mark (Left side, scaled down) -->
+  <g transform="translate(0, 5)">
+    <path d="M 5 35 L 20 20 L 20 25 L 10 35 Z" fill="url(#logoGradient)" opacity="0.9"/>
+    <path d="M 8 30 L 23 15 L 28 20 L 15 35 L 10 32 L 20 22 Z" fill="url(#logoGradient)"/>
+    <path d="M 15 22 L 28 9 L 33 14 L 23 24 L 28 20 L 23 15 Z" fill="#5A9FD6"/>
+    <path d="M 23 15 L 33 5 L 37 9 L 28 18 L 33 14 L 28 9 Z" fill="#A8CFED"/>
+  </g>
+
+  <!-- Wordmark "Blendra" (Right side) -->
+  <text x="52" y="32"
+        font-family="Inter, system-ui, -apple-system, sans-serif"
+        font-size="28"
+        font-weight="700"
+        fill="#2B4F6D"
+        letter-spacing="-0.02em">
+    Blendra
+  </text>
+</svg>
