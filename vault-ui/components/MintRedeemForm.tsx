@@ -184,7 +184,7 @@ export function MintRedeemForm({ activeAction }: MintRedeemFormProps) {
       const amountInWei = parseUnits(amount, 6);
       // Calculate expected GBPb amount with 1% slippage tolerance
       const expectedGBPb = gbpbPreview();
-      const minGbpAmount = parseUnits((expectedGBPb * 0.99).toFixed(18), 18);
+      const minGbpAmount = parseUnits(String((expectedGBPb * 0.99).toFixed(6)), 18);
       setError('');
       mint({
         address: CONTRACTS.vault,
