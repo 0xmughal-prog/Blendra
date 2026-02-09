@@ -53,7 +53,7 @@ export default function StakingPage() {
           </div>
 
           {/* Stake/Unstake Buttons */}
-          <div className="flex gap-3 mb-8">
+          <div className="flex gap-3 mb-8 mt-12">
             <button
               onClick={() => setActiveAction('stake')}
               className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${

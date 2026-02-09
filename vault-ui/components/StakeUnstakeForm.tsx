@@ -264,15 +264,15 @@ export function StakeUnstakeForm({ activeAction }: StakeUnstakeFormProps) {
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             disabled={!address || isLoading}
-            className="w-full bg-white/10 border-2 border-white/20 rounded-xl px-4 py-4 text-white text-lg font-semibold placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
+            className="w-full bg-white/10 border-2 border-white/20 rounded-xl px-4 py-4 pr-32 text-white text-lg font-semibold placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
-          <div className="absolute right-16 top-1/2 -translate-y-1/2 text-white/60 font-medium">
+          <div className="absolute right-20 top-1/2 -translate-y-1/2 text-white/60 font-medium text-sm">
             {activeAction === 'stake' ? 'GBPb' : 'sGBPb'}
           </div>
           <button
             onClick={handleMaxClick}
             disabled={!address || isLoading}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 text-sm font-semibold hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute right-4 top-1/2 -translate-y-1/2 px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-blue-400 text-xs font-semibold hover:bg-blue-500/30 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             MAX
           </button>

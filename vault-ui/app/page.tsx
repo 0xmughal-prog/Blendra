@@ -68,7 +68,7 @@ export default function Home() {
           )}
 
           {/* Mint/Redeem Buttons */}
-          <div className="flex gap-3 mb-8">
+          <div className="flex gap-3 mb-8 mt-12">
             <button
               onClick={() => setActiveAction('mint')}
               className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${

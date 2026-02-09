@@ -8,7 +8,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="absolute top-4 right-4 glass-toggle w-14 h-7 rounded-full p-0.5 transition-all duration-300 hover:scale-105 z-20"
+      className="absolute top-6 right-6 glass-toggle w-14 h-7 rounded-full p-0.5 transition-all duration-300 hover:scale-105 z-20"
       aria-label="Toggle day/night mode"
     >
       <div

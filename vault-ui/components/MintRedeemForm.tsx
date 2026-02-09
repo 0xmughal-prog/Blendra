@@ -18,6 +18,9 @@ export function MintRedeemForm({ activeAction }: MintRedeemFormProps) {
   const [error, setError] = useState('');
   const vaultMetrics = useVaultMetrics();
 
+  // Minimum mint amount in USDC
+  const MIN_MINT_AMOUNT = 125;
+
   // Read USDC balance
   const { data: usdcBalance, refetch: refetchUsdcBalance } = useReadContract({
     address: CONTRACTS.usdc,
@@ -228,6 +231,9 @@ export function MintRedeemForm({ activeAction }: MintRedeemFormProps) {
   const showSuccess = isMintSuccess || isRedeemSuccess;
   const txHash = mintHash || redeemHash || approveHash;
 
+  // Check if amount is below minimum when minting
+  const isBelowMinimum = activeAction === 'mint' && amount && parseFloat(amount) > 0 && parseFloat(amount) < MIN_MINT_AMOUNT;
+
   return (
     <div className="space-y-4">
       {/* Amount Input */}
@@ -264,6 +270,16 @@ export function MintRedeemForm({ activeAction }: MintRedeemFormProps) {
               : `${formatNumber(Number(gbpbBalance || 0n) / 1e18, 2)} GBPb`
             : '0.00'}
         </p>
+
+        {/* Minimum amount warning */}
+        {activeAction === 'mint' && amount && parseFloat(amount) > 0 && parseFloat(amount) < MIN_MINT_AMOUNT && (
+          <div className="mt-2 p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+            <p className="text-xs text-orange-400 flex items-center gap-2">
+              <AlertCircle className="h-3 w-3" />
+              Minimum mint amount is ${MIN_MINT_AMOUNT} USDC
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Preview */}
@@ -346,9 +362,9 @@ export function MintRedeemForm({ activeAction }: MintRedeemFormProps) {
         <>
           <button
             onClick={handleApprove}
-            disabled={!amount || parseFloat(amount) <= 0 || isLoading}
+            disabled={!amount || parseFloat(amount) <= 0 || isLoading || isBelowMinimum}
             className={`w-full border-2 text-white font-bold py-4 px-6 rounded-xl transition-all ${
-              !amount || parseFloat(amount) <= 0 || isLoading
+              !amount || parseFloat(amount) <= 0 || isLoading || isBelowMinimum
                 ? 'bg-white/10 border-white/20 text-white/40 cursor-not-allowed'
                 : 'bg-white/20 hover:bg-white/30 border-white/30 hover:scale-[1.02] active:scale-[0.98]'
             }`}
@@ -371,9 +387,9 @@ export function MintRedeemForm({ activeAction }: MintRedeemFormProps) {
       ) : (
         <button
           onClick={activeAction === 'mint' ? handleMint : handleRedeem}
-          disabled={!amount || parseFloat(amount) <= 0 || isLoading}
+          disabled={!amount || parseFloat(amount) <= 0 || isLoading || isBelowMinimum}
           className={`w-full border-2 text-white font-bold py-4 px-6 rounded-xl transition-all ${
-            !amount || parseFloat(amount) <= 0 || isLoading
+            !amount || parseFloat(amount) <= 0 || isLoading || isBelowMinimum
               ? 'bg-white/10 border-white/20 text-white/40 cursor-not-allowed'
               : 'bg-white/20 hover:bg-white/30 border-white/30 hover:scale-[1.02] active:scale-[0.98]'
           }`}
