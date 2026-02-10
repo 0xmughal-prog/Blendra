@@ -232,7 +232,7 @@ export function MintRedeemForm({ activeAction }: MintRedeemFormProps) {
   const txHash = mintHash || redeemHash || approveHash;
 
   // Check if amount is below minimum when minting
-  const isBelowMinimum = activeAction === 'mint' && amount && parseFloat(amount) > 0 && parseFloat(amount) < MIN_MINT_AMOUNT;
+  const isBelowMinimum = activeAction === 'mint' && !!amount && parseFloat(amount) > 0 && parseFloat(amount) < MIN_MINT_AMOUNT;
 
   return (
     <div className="space-y-4">
