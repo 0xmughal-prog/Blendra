@@ -1,0 +1,27 @@
+{
+  "network": "arbitrum-sepolia",
+  "chainId": 421614,
+  "deployedAt": "2026-01-29T22:15:26Z",
+  "deployer": "0x5db104d7820Cb05b9214f053FFc23e99e9eCf65a",
+  "mocks": {
+    "mockUSDC": "0xb286Fed46C39299299fEB270C61B8f859e0DF66B",
+    "mockKPKVault": "0x3B8939F2e5D017fa2a285d73C0435F652bD3B936",
+    "mockOstiumTrading": "0x99d87a8ec428674fF7E7Ea833eda8f0757b825f3",
+    "mockOstiumStorage": "0xE7Fd84b35dADE9754852582f30e3e72E9E6F628B",
+    "mockChainlinkFeed": "0x77260323956ff22B94549478f24981b42313fdb6"
+  },
+  "contracts": {
+    "vault": "0x41B77F5054FBcC01CD3b662fD2b9926EeC78Efef",
+    "kpkStrategy": "0xe2A8D027BA686eC4199E63577E796BBBFb0C323B",
+    "perpManager": "0x66e9d9055ddEDC8C4b4FFc2516332AEC7CaF3484",
+    "ostiumProvider": "0x3aD4c6F3929b3cD6a55C1589e860ef74491d10c3",
+    "chainlinkOracle": "0x3a2F3aecd4d89d6b0A19F5eFeE4464E0Dd4fC78A"
+  },
+  "configuration": {
+    "yieldAllocation": "9000",
+    "perpAllocation": "1000",
+    "targetLeverage": "10",
+    "pairIndex": "3",
+    "maxPriceAge": "3600"
+  }
+}

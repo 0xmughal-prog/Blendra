@@ -1,0 +1,338 @@
+No files changed, compilation skipped
+Traces:
+  [14626031] → new DeployMainnet@0x9f7cF1d1F558E57ef88a59ac3D47214eF25B6A06
+    └─ ← [Return] 72900 bytes of code
+
+  [13005877] DeployMainnet::run()
+    ├─ [0] VM::envUint("PRIVATE_KEY") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← [Return] 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E
+    ├─ [0] console::log("Deploying to Arbitrum Mainnet...") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Deployer:", 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Deployer balance:", 13040545514135278 [1.304e16]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::startBroadcast(<pk>)
+    │   └─ ← [Return]
+    ├─ [0] console::log("\n=== STEP 1: Deploying Core Tokens ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [675813] → new GBPb@0xf04e200541c6E9Ec4499757653cD2f166Faf8F91
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   └─ ← [Return] 3020 bytes of code
+    ├─ [0] console::log("GBPb deployed at:", GBPb: [0xf04e200541c6E9Ec4499757653cD2f166Faf8F91]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 2: Deploying Chainlink Oracle Wrapper ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [872744] → new ChainlinkOracle@0x85731548499ce2A9c771606cE736EDEd1CA9b136
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   └─ ← [Return] 3907 bytes of code
+    ├─ [0] console::log("ChainlinkOracle wrapper deployed at:", ChainlinkOracle: [0x85731548499ce2A9c771606cE736EDEd1CA9b136]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Using Chainlink feed:", 0x9C4424Fd84C6661F97D8d6b3fc3C1aAc2BeDd137) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 3: Deploying GBPbMinter ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [4494808] → new GBPbMinter@0x3224854163Ded9b939EEe85d0c9f3130e8fA2569
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   ├─ [20678] ChainlinkOracle::getGBPUSDPrice() [staticcall]
+    │   │   ├─ [19640] ChainlinkOracle::_getPriceFromFeed(0x9C4424Fd84C6661F97D8d6b3fc3C1aAc2BeDd137) [staticcall]
+    │   │   │   ├─ [15643] 0x9C4424Fd84C6661F97D8d6b3fc3C1aAc2BeDd137::latestRoundData() [staticcall]
+    │   │   │   │   ├─ [7410] 0x78f28D363533695458696b42577D2e1728cEa3D1::latestRoundData() [staticcall]
+    │   │   │   │   │   └─ ← [Return] 24489 [2.448e4], 136510000 [1.365e8], 1770645612 [1.77e9], 1770645612 [1.77e9], 24489 [2.448e4]
+    │   │   │   │   └─ ← [Return] 18446744073709576105 [1.844e19], 136510000 [1.365e8], 1770645612 [1.77e9], 1770645612 [1.77e9], 18446744073709576105 [1.844e19]
+    │   │   │   └─ ← [Return] 136510000 [1.365e8]
+    │   │   └─ ← [Return] 136510000 [1.365e8]
+    │   └─ ← [Return] 20431 bytes of code
+    ├─ [0] console::log("GBPbMinter deployed at:", GBPbMinter: [0x3224854163Ded9b939EEe85d0c9f3130e8fA2569]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 4: Deploying Morpho Strategy ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1053797] → new MorphoStrategyAdapter@0x6d2e4C3B491C8DCCC79C5049087533B46187227F
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   ├─ [518] 0x4B6F1C9E5d470b97181786b26da0d0945A7cf027::asset() [staticcall]
+    │   │   └─ ← [Return] 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+    │   └─ ← [Return] 5013 bytes of code
+    ├─ [0] console::log("MorphoStrategyAdapter deployed at:", MorphoStrategyAdapter: [0x6d2e4C3B491C8DCCC79C5049087533B46187227F]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 5: Deploying sGBPb Vault ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1596581] → new sGBPb@0xC388c87F3f983111C02375C956ed3f0BA6B5b18c
+    │   ├─ [280] GBPb::decimals() [staticcall]
+    │   │   └─ ← [Return] 18
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000dEaD, value: 1000000000000 [1e12])
+    │   └─ ← [Return] 6830 bytes of code
+    ├─ [0] console::log("sGBPb deployed at:", sGBPb: [0xC388c87F3f983111C02375C956ed3f0BA6B5b18c]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 6: Deploying FeeDistributor ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [778011] → new FeeDistributor@0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   └─ ← [Return] 3201 bytes of code
+    ├─ [0] console::log("FeeDistributor deployed at:", FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 7: Deploying Ostium Perp Provider (REAL INTEGRATION) ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1491042] → new OstiumPerpProvider@0xb4b570497CA831B8421308536871C071bbac5e2E
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   └─ ← [Return] 6660 bytes of code
+    ├─ [0] console::log("OstiumPerpProvider deployed at:", OstiumPerpProvider: [0xb4b570497CA831B8421308536871C071bbac5e2E]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 8: Deploying PerpPositionManager ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1522130] → new PerpPositionManager@0x555a6f93634F7B379B317Cccea47133f268947Eb
+    │   ├─ emit OwnershipTransferred(previousOwner: 0x0000000000000000000000000000000000000000, newOwner: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E)
+    │   └─ ← [Return] 7248 bytes of code
+    ├─ [0] console::log("PerpPositionManager deployed at:", PerpPositionManager: [0x555a6f93634F7B379B317Cccea47133f268947Eb]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 9: Wiring Contracts Together ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [24488] GBPb::setMinter(GBPbMinter: [0x3224854163Ded9b939EEe85d0c9f3130e8fA2569])
+    │   ├─ emit MinterUpdated(oldMinter: 0x0000000000000000000000000000000000000000, newMinter: GBPbMinter: [0x3224854163Ded9b939EEe85d0c9f3130e8fA2569])
+    │   └─ ← [Return]
+    ├─ [0] console::log("GBPb minter set") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [25094] sGBPb::setMinter(GBPbMinter: [0x3224854163Ded9b939EEe85d0c9f3130e8fA2569])
+    │   ├─ emit MinterUpdated(oldMinter: 0x0000000000000000000000000000000000000000, newMinter: GBPbMinter: [0x3224854163Ded9b939EEe85d0c9f3130e8fA2569])
+    │   └─ ← [Return]
+    ├─ [0] console::log("sGBPb minter set") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [24747] sGBPb::setFeeCollector(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913])
+    │   ├─ emit FeeCollectorUpdated(oldCollector: 0x0000000000000000000000000000000000000000, newCollector: FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913])
+    │   └─ ← [Return]
+    ├─ [0] console::log("sGBPb fee collector set") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [21481] GBPbMinter::setActiveStrategy(MorphoStrategyAdapter: [0x6d2e4C3B491C8DCCC79C5049087533B46187227F])
+    │   └─ ← [Return]
+    ├─ [0] console::log("Minter active strategy set") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [25371] GBPbMinter::setSGBPbVault(sGBPb: [0xC388c87F3f983111C02375C956ed3f0BA6B5b18c])
+    │   ├─ emit SGBPbVaultUpdated(oldVault: 0x0000000000000000000000000000000000000000, newVault: sGBPb: [0xC388c87F3f983111C02375C956ed3f0BA6B5b18c])
+    │   └─ ← [Return]
+    ├─ [0] console::log("Minter sGBPb vault set") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [23223] GBPbMinter::setPerpManager(PerpPositionManager: [0x555a6f93634F7B379B317Cccea47133f268947Eb])
+    │   └─ ← [Return]
+    ├─ [0] console::log("Minter perp manager set") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== STEP 10: Initial Configuration ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [924] GBPbMinter::setWeekendCheckEnabled(false)
+    │   └─ ← [Return]
+    ├─ [0] console::log("Weekend check disabled (enable after testing)") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [26580] FeeDistributor::setRevenueSplit(8000, 2000)
+    │   ├─ [9750] 0xaf88d065e77c8cC2239327C5EDb3A432268e5831::balanceOf(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [staticcall]
+    │   │   ├─ [2553] 0x86E721b43d4ECFa71119Dd38c0f938A75Fdb57B3::balanceOf(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [delegatecall]
+    │   │   │   └─ ← [Return] 0
+    │   │   └─ ← [Return] 0
+    │   ├─ [1250] 0xaf88d065e77c8cC2239327C5EDb3A432268e5831::balanceOf(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [staticcall]
+    │   │   ├─ [553] 0x86E721b43d4ECFa71119Dd38c0f938A75Fdb57B3::balanceOf(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [delegatecall]
+    │   │   │   └─ ← [Return] 0
+    │   │   └─ ← [Return] 0
+    │   ├─ [1250] 0xaf88d065e77c8cC2239327C5EDb3A432268e5831::balanceOf(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [staticcall]
+    │   │   ├─ [553] 0x86E721b43d4ECFa71119Dd38c0f938A75Fdb57B3::balanceOf(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [delegatecall]
+    │   │   │   └─ ← [Return] 0
+    │   │   └─ ← [Return] 0
+    │   ├─ emit RevenueSplitUpdated(treasuryBps: 8000, reserveBps: 2000)
+    │   └─ ← [Return]
+    ├─ [0] console::log("Fee split set: 80% treasury, 20% reserve") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← [Return]
+    ├─ [0] console::log("\n========================================") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("DEPLOYMENT COMPLETE!") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("========================================") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Core Contracts:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  GBPb:              ", GBPb: [0xf04e200541c6E9Ec4499757653cD2f166Faf8F91]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  GBPbMinter:        ", GBPbMinter: [0x3224854163Ded9b939EEe85d0c9f3130e8fA2569]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  sGBPb:             ", sGBPb: [0xC388c87F3f983111C02375C956ed3f0BA6B5b18c]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Strategies:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  MorphoStrategy:    ", MorphoStrategyAdapter: [0x6d2e4C3B491C8DCCC79C5049087533B46187227F]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Perp Integration:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  OstiumProvider:    ", OstiumPerpProvider: [0xb4b570497CA831B8421308536871C071bbac5e2E]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  PerpManager:       ", PerpPositionManager: [0x555a6f93634F7B379B317Cccea47133f268947Eb]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Fee Management:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  FeeDistributor:    ", FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Oracle:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  ChainlinkOracle:   ", ChainlinkOracle: [0x85731548499ce2A9c771606cE736EDEd1CA9b136]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("External Contracts:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  USDC:              ", 0xaf88d065e77c8cC2239327C5EDb3A432268e5831) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  Chainlink Feed:    ", 0x9C4424Fd84C6661F97D8d6b3fc3C1aAc2BeDd137) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  Ostium Trading:    ", 0x6D0bA1f9996DBD8885827e1b2e8f6593e7702411) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  Ostium Storage:    ", 0xcCd5891083A8acD2074690F65d3024E7D13d66E7) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  Morpho Vault:      ", 0x4B6F1C9E5d470b97181786b26da0d0945A7cf027) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Configuration:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  GBP/USD Pair Index:", 3) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  Target Leverage:   ", 5, "x") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("  Weekend Check:     ", "DISABLED") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("========================================") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("NEXT STEPS:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("1. Verify contracts on Arbiscan") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("2. Test with small amounts") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("3. Enable weekend check after testing") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("4. Update UI with contract addresses") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("5. Deploy UI to Vercel") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("========================================") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::toString(GBPb: [0xf04e200541c6E9Ec4499757653cD2f166Faf8F91]) [staticcall]
+    │   └─ ← [Return] "0xf04e200541c6E9Ec4499757653cD2f166Faf8F91"
+    ├─ [0] VM::toString(GBPbMinter: [0x3224854163Ded9b939EEe85d0c9f3130e8fA2569]) [staticcall]
+    │   └─ ← [Return] "0x3224854163Ded9b939EEe85d0c9f3130e8fA2569"
+    ├─ [0] VM::toString(sGBPb: [0xC388c87F3f983111C02375C956ed3f0BA6B5b18c]) [staticcall]
+    │   └─ ← [Return] "0xC388c87F3f983111C02375C956ed3f0BA6B5b18c"
+    ├─ [0] VM::toString(ChainlinkOracle: [0x85731548499ce2A9c771606cE736EDEd1CA9b136]) [staticcall]
+    │   └─ ← [Return] "0x85731548499ce2A9c771606cE736EDEd1CA9b136"
+    ├─ [0] VM::toString(MorphoStrategyAdapter: [0x6d2e4C3B491C8DCCC79C5049087533B46187227F]) [staticcall]
+    │   └─ ← [Return] "0x6d2e4C3B491C8DCCC79C5049087533B46187227F"
+    ├─ [0] VM::toString(OstiumPerpProvider: [0xb4b570497CA831B8421308536871C071bbac5e2E]) [staticcall]
+    │   └─ ← [Return] "0xb4b570497CA831B8421308536871C071bbac5e2E"
+    ├─ [0] VM::toString(PerpPositionManager: [0x555a6f93634F7B379B317Cccea47133f268947Eb]) [staticcall]
+    │   └─ ← [Return] "0x555a6f93634F7B379B317Cccea47133f268947Eb"
+    ├─ [0] VM::toString(FeeDistributor: [0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913]) [staticcall]
+    │   └─ ← [Return] "0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913"
+    ├─ [0] VM::writeFile("deployments/arbitrum-mainnet.json", "{\n  \"gbpb\": \"0xf04e200541c6E9Ec4499757653cD2f166Faf8F91\",\n  \"minter\": \"0x3224854163Ded9b939EEe85d0c9f3130e8fA2569\",\n  \"sGBPb\": \"0xC388c87F3f983111C02375C956ed3f0BA6B5b18c\",\n  \"oracle\": \"0x85731548499ce2A9c771606cE736EDEd1CA9b136\",\n  \"morphoStrategy\": \"0x6d2e4C3B491C8DCCC79C5049087533B46187227F\",\n  \"ostiumProvider\": \"0xb4b570497CA831B8421308536871C071bbac5e2E\",\n  \"perpManager\": \"0x555a6f93634F7B379B317Cccea47133f268947Eb\",\n  \"feeDistributor\": \"0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913\",\n  \"chainId\": 42161\n}\n")
+    │   └─ ← [Revert] vm.writeFile: the path deployments/arbitrum-mainnet.json is not allowed to be accessed for write operations
+    └─ ← [Revert] vm.writeFile: the path deployments/arbitrum-mainnet.json is not allowed to be accessed for write operations
+
+
+
+== Logs ==
+  Deploying to Arbitrum Mainnet...
+  Deployer: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E
+  Deployer balance: 13040545514135278
+  
+=== STEP 1: Deploying Core Tokens ===
+  GBPb deployed at: 0xf04e200541c6E9Ec4499757653cD2f166Faf8F91
+  
+=== STEP 2: Deploying Chainlink Oracle Wrapper ===
+  ChainlinkOracle wrapper deployed at: 0x85731548499ce2A9c771606cE736EDEd1CA9b136
+  Using Chainlink feed: 0x9C4424Fd84C6661F97D8d6b3fc3C1aAc2BeDd137
+  
+=== STEP 3: Deploying GBPbMinter ===
+  GBPbMinter deployed at: 0x3224854163Ded9b939EEe85d0c9f3130e8fA2569
+  
+=== STEP 4: Deploying Morpho Strategy ===
+  MorphoStrategyAdapter deployed at: 0x6d2e4C3B491C8DCCC79C5049087533B46187227F
+  
+=== STEP 5: Deploying sGBPb Vault ===
+  sGBPb deployed at: 0xC388c87F3f983111C02375C956ed3f0BA6B5b18c
+  
+=== STEP 6: Deploying FeeDistributor ===
+  FeeDistributor deployed at: 0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913
+  
+=== STEP 7: Deploying Ostium Perp Provider (REAL INTEGRATION) ===
+  OstiumPerpProvider deployed at: 0xb4b570497CA831B8421308536871C071bbac5e2E
+  
+=== STEP 8: Deploying PerpPositionManager ===
+  PerpPositionManager deployed at: 0x555a6f93634F7B379B317Cccea47133f268947Eb
+  
+=== STEP 9: Wiring Contracts Together ===
+  GBPb minter set
+  sGBPb minter set
+  sGBPb fee collector set
+  Minter active strategy set
+  Minter sGBPb vault set
+  Minter perp manager set
+  
+=== STEP 10: Initial Configuration ===
+  Weekend check disabled (enable after testing)
+  Fee split set: 80% treasury, 20% reserve
+  
+========================================
+  DEPLOYMENT COMPLETE!
+  ========================================
+  
+  Core Contracts:
+    GBPb:               0xf04e200541c6E9Ec4499757653cD2f166Faf8F91
+    GBPbMinter:         0x3224854163Ded9b939EEe85d0c9f3130e8fA2569
+    sGBPb:              0xC388c87F3f983111C02375C956ed3f0BA6B5b18c
+  
+  Strategies:
+    MorphoStrategy:     0x6d2e4C3B491C8DCCC79C5049087533B46187227F
+  
+  Perp Integration:
+    OstiumProvider:     0xb4b570497CA831B8421308536871C071bbac5e2E
+    PerpManager:        0x555a6f93634F7B379B317Cccea47133f268947Eb
+  
+  Fee Management:
+    FeeDistributor:     0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913
+  
+  Oracle:
+    ChainlinkOracle:    0x85731548499ce2A9c771606cE736EDEd1CA9b136
+  
+  External Contracts:
+    USDC:               0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+    Chainlink Feed:     0x9C4424Fd84C6661F97D8d6b3fc3C1aAc2BeDd137
+    Ostium Trading:     0x6D0bA1f9996DBD8885827e1b2e8f6593e7702411
+    Ostium Storage:     0xcCd5891083A8acD2074690F65d3024E7D13d66E7
+    Morpho Vault:       0x4B6F1C9E5d470b97181786b26da0d0945A7cf027
+  
+  Configuration:
+    GBP/USD Pair Index: 3
+    Target Leverage:    5 x
+    Weekend Check:      DISABLED
+  
+  ========================================
+  
+  NEXT STEPS:
+  1. Verify contracts on Arbiscan
+  2. Test with small amounts
+  3. Enable weekend check after testing
+  4. Update UI with contract addresses
+  5. Deploy UI to Vercel
+  ========================================
+Error: script failed: vm.writeFile: the path deployments/arbitrum-mainnet.json is not allowed to be accessed for write operations

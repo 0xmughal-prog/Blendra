@@ -1,0 +1,274 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "forge-std/Script.sol";
+import "forge-std/console.sol";
+
+// Production contracts
+import "../src/GBPYieldVault.sol";
+import "../src/strategies/KPKMorphoStrategy.sol";
+import "../src/providers/OstiumPerpProvider.sol";
+import "../src/PerpPositionManager.sol";
+import "../src/ChainlinkOracle.sol";
+
+// Mock contracts for testnet
+import "../src/mocks/MockERC20.sol";
+import "../src/mocks/MockERC4626Vault.sol";
+import "../src/mocks/MockOstiumTrading.sol";
+import "../src/mocks/MockOstiumTradingStorage.sol";
+import "../src/mocks/MockChainlinkOracle.sol";
+
+/**
+ * @title DeployTestnet
+ * @notice Comprehensive deployment script for Arbitrum Sepolia testnet
+ * @dev Deploys ALL contracts including mocks for protocols not available on testnet
+ *
+ * Usage:
+ *   forge script script/DeployTestnet.s.sol:DeployTestnet \
+ *     --rpc-url $ARBITRUM_SEPOLIA_RPC_URL \
+ *     --broadcast \
+ *     --verify
+ *
+ * Architecture:
+ *   1. Deploy mock infrastructure (USDC, KPK vault, Ostium, Chainlink)
+ *   2. Deploy real strategy contracts (KPKMorphoStrategy, OstiumPerpProvider)
+ *   3. Deploy ChainlinkOracle wrapper
+ *   4. Deploy main GBPYieldVault
+ *   5. Configure and verify
+ */
+contract DeployTestnet is Script {
+    // ============ Configuration ============
+
+    // Vault configuration (matching mainnet plan)
+    uint256 constant YIELD_ALLOCATION = 9000;  // 90%
+    uint256 constant PERP_ALLOCATION = 1000;   // 10%
+    uint256 constant TARGET_LEVERAGE = 10;     // 10x
+
+    // GBP/USD pair index (same as mainnet Ostium)
+    uint16 constant GBP_USD_PAIR_INDEX = 3;
+
+    // Oracle configuration
+    uint256 constant MAX_PRICE_AGE = 3600; // 1 hour
+
+    // Mock initial prices (8 decimals for Chainlink format)
+    int256 constant INITIAL_GBP_USD_PRICE = 126500000; // 1.265 GBP/USD
+
+    // ============ Deployed Contracts ============
+
+    // Mocks
+    MockERC20 public mockUSDC;
+    MockERC4626Vault public mockKPKVault;
+    MockOstiumTrading public mockOstiumTrading;
+    MockOstiumTradingStorage public mockOstiumStorage;
+    MockChainlinkOracle public mockChainlinkFeed;
+
+    // Real contracts
+    KPKMorphoStrategy public kpkStrategy;
+    OstiumPerpProvider public ostiumProvider;
+    PerpPositionManager public perpManager;
+    ChainlinkOracle public chainlinkOracle;
+    GBPYieldVault public vault;
+
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
+
+        console.log("=== Deploying to Arbitrum Sepolia ===");
+        console.log("Deployer:", deployer);
+        console.log("Chain ID:", block.chainid);
+        require(block.chainid == 421614, "Must deploy to Arbitrum Sepolia");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Step 1: Deploy mock infrastructure
+        deployMocks();
+
+        // Step 2: Deploy real contracts
+        deployRealContracts(deployer);
+
+        // Step 3: Configure contracts
+        configureContracts(deployer);
+
+        vm.stopBroadcast();
+
+        // Step 4: Print deployment summary
+        printDeploymentSummary();
+    }
+
+    /**
+     * @notice Deploy all mock contracts
+     */
+    function deployMocks() internal {
+        console.log("\n=== Step 1: Deploying Mocks ===");
+
+        // 1. Deploy mock USDC (6 decimals like real USDC)
+        mockUSDC = new MockERC20("USD Coin", "USDC", 6);
+        console.log("MockUSDC deployed:", address(mockUSDC));
+
+        // 2. Deploy mock KPK Morpho vault (ERC4626)
+        mockKPKVault = new MockERC4626Vault(
+            mockUSDC,
+            "Mock KPK Vault",
+            "mKPK"
+        );
+        console.log("MockKPKVault deployed:", address(mockKPKVault));
+
+        // 3. Deploy mock Ostium contracts
+        mockOstiumStorage = new MockOstiumTradingStorage(address(mockUSDC));
+        console.log("MockOstiumStorage deployed:", address(mockOstiumStorage));
+
+        mockOstiumTrading = new MockOstiumTrading(
+            address(mockOstiumStorage)
+        );
+        console.log("MockOstiumTrading deployed:", address(mockOstiumTrading));
+
+        // 4. Deploy mock Chainlink GBP/USD feed
+        mockChainlinkFeed = new MockChainlinkOracle(
+            INITIAL_GBP_USD_PRICE,
+            8 // Chainlink uses 8 decimals
+        );
+        console.log("MockChainlinkFeed deployed:", address(mockChainlinkFeed));
+        console.log("Initial GBP/USD price:", uint256(INITIAL_GBP_USD_PRICE));
+    }
+
+    /**
+     * @notice Deploy real production contracts
+     */
+    function deployRealContracts(address deployer) internal {
+        console.log("\n=== Step 2: Deploying Real Contracts ===");
+
+        // Predict vault address for strategy/perpManager deployment
+        // Strategy and perpManager need to know the vault address upfront
+        // We'll deploy: Oracle, Strategy, Provider, PerpManager, then Vault
+        // So vault will be at nonce + 4
+        address predictedVault = vm.computeCreateAddress(deployer, vm.getNonce(deployer) + 4);
+        console.log("Predicted vault address:", predictedVault);
+
+        // 1. Deploy Chainlink Oracle wrapper
+        chainlinkOracle = new ChainlinkOracle(
+            address(mockChainlinkFeed),
+            MAX_PRICE_AGE
+        );
+        console.log("ChainlinkOracle deployed:", address(chainlinkOracle));
+
+        // 2. Deploy KPK Morpho Strategy
+        kpkStrategy = new KPKMorphoStrategy(
+            address(mockKPKVault),  // Mock KPK vault
+            predictedVault          // Main vault address
+        );
+        console.log("KPKMorphoStrategy deployed:", address(kpkStrategy));
+
+        // 3. Deploy Ostium Perp Provider
+        ostiumProvider = new OstiumPerpProvider(
+            address(mockOstiumTrading),
+            address(mockOstiumStorage),
+            address(mockUSDC),
+            GBP_USD_PAIR_INDEX,
+            TARGET_LEVERAGE
+        );
+        console.log("OstiumPerpProvider deployed:", address(ostiumProvider));
+
+        // 4. Deploy PerpPositionManager
+        perpManager = new PerpPositionManager(
+            predictedVault,              // Main vault address
+            address(mockUSDC),           // Collateral token
+            address(ostiumProvider),     // Perp provider
+            bytes32("GBP/USD")          // Market identifier
+        );
+        console.log("PerpPositionManager deployed:", address(perpManager));
+
+        // 5. Deploy main GBP Yield Vault
+        vault = new GBPYieldVault(
+            address(mockUSDC),
+            "GBP Yield Vault",
+            "gbpUSDC",
+            address(kpkStrategy),
+            address(perpManager),        // Note: Uses PerpPositionManager, not OstiumPerpProvider
+            address(chainlinkOracle),
+            YIELD_ALLOCATION,
+            PERP_ALLOCATION,
+            TARGET_LEVERAGE
+        );
+
+        // Verify vault address matches prediction
+        require(address(vault) == predictedVault, "Vault address mismatch!");
+        console.log("GBPYieldVault deployed:", address(vault));
+    }
+
+    /**
+     * @notice Configure contracts with proper permissions
+     */
+    function configureContracts(address deployer) internal {
+        console.log("\n=== Step 3: Configuring Contracts ===");
+
+        // 1. Transfer ownership of strategy to vault (required for emergency functions)
+        kpkStrategy.transferOwnership(address(vault));
+        console.log("KPKMorphoStrategy ownership -> Vault");
+
+        // 2. Transfer ownership of PerpPositionManager to vault (required for onlyVault modifier)
+        perpManager.transferOwnership(address(vault));
+        console.log("PerpPositionManager ownership -> Vault");
+
+        // 3. Keep OstiumPerpProvider ownership with deployer (for parameter adjustments)
+        console.log("OstiumPerpProvider owner:", ostiumProvider.owner());
+
+        // 4. Set up initial test funds in mock USDC (100,000 USDC)
+        mockUSDC.mint(deployer, 100_000 * 10**6); // 100k USDC
+        console.log("Minted 100,000 USDC to deployer for testing");
+    }
+
+    /**
+     * @notice Print comprehensive deployment summary
+     */
+    function printDeploymentSummary() internal view {
+        console.log("\n");
+        console.log("================================================================");
+        console.log("        GBP Yield Vault - Testnet Deployment Summary          ");
+        console.log("================================================================");
+        console.log("");
+        console.log("Network: Arbitrum Sepolia (421614)");
+        console.log("");
+        console.log("=== MOCK CONTRACTS (Testnet Only) ===");
+        console.log("MockUSDC:              ", address(mockUSDC));
+        console.log("MockKPKVault:          ", address(mockKPKVault));
+        console.log("MockOstiumTrading:     ", address(mockOstiumTrading));
+        console.log("MockOstiumStorage:     ", address(mockOstiumStorage));
+        console.log("MockChainlinkFeed:     ", address(mockChainlinkFeed));
+        console.log("");
+        console.log("=== PRODUCTION CONTRACTS ===");
+        console.log("GBPYieldVault:         ", address(vault));
+        console.log("KPKMorphoStrategy:     ", address(kpkStrategy));
+        console.log("PerpPositionManager:   ", address(perpManager));
+        console.log("OstiumPerpProvider:    ", address(ostiumProvider));
+        console.log("ChainlinkOracle:       ", address(chainlinkOracle));
+        console.log("");
+        console.log("=== CONFIGURATION ===");
+        console.log("Yield Allocation:      90% (9000 bps)");
+        console.log("Perp Allocation:       10% (1000 bps)");
+        console.log("Target Leverage:       10x");
+        console.log("GBP/USD Pair Index:    3");
+        console.log("Max Price Age:         3600 seconds");
+        console.log("");
+        console.log("=== VERIFICATION COMMANDS ===");
+        console.log("");
+        console.log("Verify on Arbiscan:");
+        console.log("forge verify-contract", address(vault));
+        console.log("  src/GBPYieldVault.sol:GBPYieldVault \\");
+        console.log("  --chain arbitrum-sepolia \\");
+        console.log("  --constructor-args $(cast abi-encode \"constructor(address,string,string,address,address,address,uint256,uint256,uint256)\" \\");
+        console.log("    ", address(mockUSDC), "\\");
+        console.log("    \"GBP Yield Vault\" \"gbpUSDC\" \\");
+        console.log("    ", address(kpkStrategy), "\\");
+        console.log("    ", address(ostiumProvider), "\\");
+        console.log("    ", address(chainlinkOracle), "\\");
+        console.log("    9000 1000 10)");
+        console.log("");
+        console.log("=== NEXT STEPS ===");
+        console.log("1. Verify contracts on Arbiscan");
+        console.log("2. Run test transactions (see TESTING.md)");
+        console.log("3. Monitor vault performance");
+        console.log("4. Document any issues for mainnet deployment");
+        console.log("");
+        console.log("================================================================");
+    }
+}

@@ -1,0 +1,202 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "../interfaces/IYieldStrategy.sol";
+
+/**
+ * @title KPKMorphoStrategy
+ * @notice Yield strategy implementation for KPK Agent-Powered Morpho Vault
+ * @dev Implements IYieldStrategy using OpenZeppelin's audited ERC4626 interface
+ * @dev KPK vault address: 0x2C609d9CfC9dda2dB5C128B2a665D921ec53579d (Arbitrum)
+ *
+ * KPK Features:
+ * - Agent-driven allocation across Arbitrum lending markets
+ * - Dynamic APY (historically 8-12%)
+ * - ERC-4626 compliant
+ * - Up to 46% outperformance vs static allocations
+ */
+contract KPKMorphoStrategy is IYieldStrategy, Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    /// @notice KPK Morpho Vault (ERC4626)
+    IERC4626 public immutable kpkVault;
+
+    /// @notice Underlying asset (USDC)
+    IERC20 public immutable underlyingAsset;
+
+    /// @notice Vault that owns this strategy
+    address public immutable vault;
+
+    /// @notice Precision for share ratio calculations
+    uint256 private constant SHARE_PRECISION = 1e18;
+
+    error OnlyVault();
+    error ZeroAmount();
+    error InvalidAddress();
+    error DepositFailed();
+    error WithdrawFailed();
+
+    modifier onlyVault() {
+        if (msg.sender != vault) revert OnlyVault();
+        _;
+    }
+
+    /**
+     * @notice Constructor
+     * @param _kpkVault Address of KPK Morpho vault (ERC4626)
+     * @param _vault Address of the main GBP yield vault
+     */
+    constructor(address _kpkVault, address _vault) Ownable(msg.sender) {
+        if (_kpkVault == address(0)) revert InvalidAddress();
+        if (_vault == address(0)) revert InvalidAddress();
+
+        kpkVault = IERC4626(_kpkVault);
+        vault = _vault;
+        underlyingAsset = IERC20(kpkVault.asset());
+    }
+
+    /**
+     * @notice Deposit assets into KPK Morpho vault
+     * @dev Uses OpenZeppelin's ERC4626 interface for maximum safety
+     * @param amount Amount of assets to deposit
+     * @return The actual amount deposited
+     */
+    function deposit(uint256 amount) external override onlyVault nonReentrant returns (uint256) {
+        if (amount == 0) revert ZeroAmount();
+
+        // Transfer assets from vault to this contract
+        underlyingAsset.safeTransferFrom(msg.sender, address(this), amount);
+
+        // Approve KPK vault to spend assets
+        underlyingAsset.forceApprove(address(kpkVault), amount);
+
+        // Deposit to KPK vault using ERC4626 standard
+        // This returns the amount of shares minted
+        uint256 sharesMinted = kpkVault.deposit(amount, address(this));
+
+        if (sharesMinted == 0) revert DepositFailed();
+
+        emit Deposited(amount, sharesMinted);
+
+        return amount;
+    }
+
+    /**
+     * @notice Withdraw assets from KPK Morpho vault based on share ratio
+     * @dev Withdraws proportionally based on vault's share of total supply
+     * @param shareRatio The proportion of total shares to withdraw (in 1e18 precision)
+     * @return The amount of assets withdrawn
+     */
+    function withdraw(uint256 shareRatio) external override onlyVault nonReentrant returns (uint256) {
+        if (shareRatio == 0) revert ZeroAmount();
+        if (shareRatio > SHARE_PRECISION) revert("Invalid share ratio");
+
+        // Get our current KPK vault shares
+        uint256 ourShares = kpkVault.balanceOf(address(this));
+
+        if (ourShares == 0) {
+            return 0; // Nothing to withdraw
+        }
+
+        // Calculate shares to redeem based on ratio
+        uint256 sharesToRedeem = (ourShares * shareRatio) / SHARE_PRECISION;
+
+        if (sharesToRedeem == 0) revert ZeroAmount();
+
+        // Redeem from KPK vault using ERC4626 standard
+        // This returns the amount of assets received
+        uint256 assetsReceived = kpkVault.redeem(
+            sharesToRedeem,
+            address(this), // Receive assets here
+            address(this)  // Owner of shares
+        );
+
+        if (assetsReceived == 0) revert WithdrawFailed();
+
+        // Transfer assets back to vault
+        underlyingAsset.safeTransfer(vault, assetsReceived);
+
+        emit Withdrawn(sharesToRedeem, assetsReceived);
+
+        return assetsReceived;
+    }
+
+    /**
+     * @notice Get the total value of assets in the strategy
+     * @dev Converts our KPK shares to underlying asset value using ERC4626
+     * @return The total asset value
+     */
+    function totalAssets() external view override returns (uint256) {
+        uint256 ourShares = kpkVault.balanceOf(address(this));
+
+        if (ourShares == 0) {
+            return 0;
+        }
+
+        // Use ERC4626's convertToAssets for accurate valuation
+        // This accounts for yield accrued in the KPK vault
+        return kpkVault.convertToAssets(ourShares);
+    }
+
+    /**
+     * @notice Get the underlying asset address
+     * @return The address of the underlying asset (USDC)
+     */
+    function asset() external view override returns (address) {
+        return address(underlyingAsset);
+    }
+
+    /**
+     * @notice Get current KPK vault shares balance
+     * @return Amount of KPK vault shares held by this strategy
+     */
+    function sharesBalance() external view returns (uint256) {
+        return kpkVault.balanceOf(address(this));
+    }
+
+    /**
+     * @notice Get current APY from KPK vault (if available)
+     * @dev KPK vaults may expose APY data - this is a view-only helper
+     * @return Estimated APY in basis points (e.g., 1000 = 10%)
+     */
+    function estimatedAPY() external pure returns (uint256) {
+        // KPK historical range: 8-12%
+        // Returning mid-point estimate: 10%
+        return 1000; // 10% in basis points
+    }
+
+    /**
+     * @notice Emergency withdrawal of all assets
+     * @dev Only owner can call in emergencies
+     */
+    function emergencyWithdraw() external onlyOwner nonReentrant {
+        uint256 ourShares = kpkVault.balanceOf(address(this));
+
+        if (ourShares == 0) {
+            return;
+        }
+
+        // Redeem all shares
+        uint256 assetsReceived = kpkVault.redeem(
+            ourShares,
+            vault, // Send directly to vault
+            address(this)
+        );
+
+        emit Withdrawn(ourShares, assetsReceived);
+    }
+
+    /**
+     * @notice Emergency withdrawal of stuck tokens
+     * @param token Token address to withdraw
+     * @param amount Amount to withdraw
+     */
+    function emergencyWithdrawToken(address token, uint256 amount) external onlyOwner {
+        IERC20(token).safeTransfer(msg.sender, amount);
+    }
+}

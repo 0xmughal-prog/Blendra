@@ -1,0 +1,101 @@
+Compiling 1 files with Solc 0.8.20
+Solc 0.8.20 finished in 11.03s
+Compiler run successful with warnings:
+Warning (2072): Unused local variable.
+    --> src/tokens/GBPbMinter.sol:1027:9:
+     |
+1027 |         uint256 newLendingAmount = (newTVL * LENDING_ALLOCATION_BPS) / BPS;
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/providers/OstiumPerpProvider.sol:284:9:
+    |
+284 |         uint256 collateralDelta,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/providers/OstiumPerpProvider.sol:356:45:
+    |
+356 |     function getPositionPnL(bytes32 market, address account) external view override returns (int256 pnl) {
+    |                                             ^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/providers/OstiumPerpProvider.sol:409:46:
+    |
+409 |     function getPositionSize(bytes32 market, address account) external view override returns (uint256 size) {
+    |                                              ^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/providers/OstiumPerpProvider.sol:434:52:
+    |
+434 |     function getPositionCollateral(bytes32 market, address account)
+    |                                                    ^^^^^^^^^^^^^^^
+
+Script ran successfully.
+
+== Logs ==
+  === DEPLOYING GAS FIX CONTRACTS ===
+  Deployer: 0x1A3e6f7762C12a9D308b92E99d3340B76D43eA5E
+  
+  1. Deploying new OstiumPerpProvider...
+     New OstiumPerpProvider: 0xfD08f1C84deF1997521aF79AB653fF368322b269
+  
+  2. Deploying new GBPbMinter...
+     New GBPbMinter: 0x2339b63D3b9e9E246f8c8485Db90EABb88f44c61
+  
+  3. Deploying new PerpPositionManager...
+     New PerpPositionManager: 0xEc791A81F5D54c89749313D256Dd7289C62A8B7E
+  
+  4. Wiring contracts...
+     Set Morpho strategy on minter
+     Set perp manager on minter
+     Set minter on GBPb
+     Set minter on sGBPb
+     Set sGBPb vault on minter
+     Set fee recipient
+     Set harvest config
+     Set TVL cap
+  
+  ========================================
+  DEPLOYMENT COMPLETE!
+  ========================================
+  
+  New Addresses:
+    GBPbMinter:           0x2339b63D3b9e9E246f8c8485Db90EABb88f44c61
+    PerpPositionManager:  0xEc791A81F5D54c89749313D256Dd7289C62A8B7E
+    OstiumPerpProvider:   0xfD08f1C84deF1997521aF79AB653fF368322b269
+  
+  Old Addresses (can ignore):
+    Old GBPbMinter:       0x3224854163Ded9b939EEe85d0c9f3130e8fA2569
+    Old PerpManager:      0xBf702F23D0BB9eFD7A3F1488a4a1A7A4b662a1D3
+    Old Provider:         0x05Ab8B473ed6854BcA6Cc0827052989211EfacB7
+  
+  Next Steps:
+  1. Update vault-ui/lib/contracts.ts with new minter address
+  2. Deploy to Vercel
+  3. Test $125 mint via UI
+  ========================================
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 42161
+
+Estimated gas price: 0.040232001 gwei
+
+Estimated total gas used for script: 11136044
+
+Estimated amount required: 0.000448025333344044 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/wajahat/Downloads/Claude Work/New idea for GBP yield product/gbp-yield-vault/broadcast/DeployGasFixContracts.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/wajahat/Downloads/Claude Work/New idea for GBP yield product/gbp-yield-vault/cache/DeployGasFixContracts.s.sol/42161/run-latest.json
+

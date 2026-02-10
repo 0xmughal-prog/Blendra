@@ -1,0 +1,12 @@
+{
+  "gbpb": "0xf04e200541c6E9Ec4499757653cD2f166Faf8F91",
+  "minter": "0x2339b63D3b9e9E246f8c8485Db90EABb88f44c61",
+  "sGBPb": "0xFeb31be5dB6A49d67Cd131e56C98d1ABcE52aED3",
+  "oracle": "0x85731548499ce2A9c771606cE736EDEd1CA9b136",
+  "morphoStrategy": "0x6d2e4C3B491C8DCCC79C5049087533B46187227F",
+  "ostiumProvider": "0xfD08f1C84deF1997521aF79AB653fF368322b269",
+  "perpManager": "0xEc791A81F5D54c89749313D256Dd7289C62A8B7E",
+  "feeDistributor": "0x7545c943A2dD2bFc3593810F96dEe4AD7CE9a913",
+  "chainId": 42161,
+  "note": "Gas fix deployment - explicit gas forwarding at all call levels"
+}

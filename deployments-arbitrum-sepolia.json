@@ -1,0 +1,44 @@
+{
+  "network": "Arbitrum Sepolia",
+  "chainId": 421614,
+  "deployer": "0x5db104d7820Cb05b9214f053FFc23e99e9eCf65a",
+  "timestamp": "2026-02-03",
+  "targetLeverage": "10x",
+  "minCollateralRatio": "10%",
+
+  "mocks": {
+    "usdc": "0xEACE2c1eEA7A7025fDaDd5b7546Ffd0d65bc94e2",
+    "morphoVault": "0x138750472207dE26458C50Deaa6C919Ace8A453C",
+    "gbpUsdFeed": "0x63E9942151adE93B059d2B8B5425B6A68f1d4778",
+    "ostiumTrading": "0x51FdC2ff2a315f0dC52Ea846a9628558A9278E57",
+    "ostiumStorage": "0xc784e8feC8e8C320e31117E2c43b72D72C415B6e"
+  },
+
+  "tokens": {
+    "gbpb": "0x23589CA228Ce53004A4BCc1dbE73E185F7d6970E",
+    "sGBPb": "0x2B3E6243DBE7f59da34EAfc92475C24702eEAE8C"
+  },
+
+  "core": {
+    "minter": "0xC0e4e8925476ce02d015ceEaC0D3E03C471D2A76",
+    "feeDistributor": "0xA6Cc9D3ACd4E28CB117b44d1AacDEe4B89Ab8175"
+  },
+
+  "strategies": {
+    "morpho": "0xA56Af0ebA0dAC4C89761c4B2B1F86Cd104F96D3b",
+    "perpManager": "0x2F7432d1556bf44374ef3fc3aA2A0C38aD50D209",
+    "ostiumProvider": "0x21a0c3872F4A181301B6A5e9025E1dAaC4947028"
+  },
+
+  "oracles": {
+    "chainlink": "0x7983266bD7a3E86E28261d17E9722Bd98de5D22b"
+  },
+
+  "config": {
+    "treasury": "0x5db104d7820Cb05b9214f053FFc23e99e9eCf65a",
+    "reserve": "0x5db104d7820Cb05b9214f053FFc23e99e9eCf65a",
+    "tvlCap": "10000000000000",
+    "performanceFee": "2000",
+    "gbpUsdPrice": "127000000"
+  }
+}

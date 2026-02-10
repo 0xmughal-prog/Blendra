@@ -1,0 +1,373 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./interfaces/IYieldStrategy.sol";
+import "./PerpPositionManager.sol";
+import "./ChainlinkOracle.sol";
+
+/**
+ * @title GBPYieldVaultV2
+ * @notice Enhanced GBP Yield Vault with hot-swappable lending strategies
+ * @dev Adds ability to change the underlying lending protocol (Morpho -> Euler -> Aave, etc.)
+ *
+ * Key Enhancement: Strategy can be changed by admin with timelock protection
+ *
+ * Architecture:
+ * - 90% in lending strategy (swappable: Morpho, Euler, Aave, etc.)
+ * - 10% in GBP/USD perpetual futures (10x leverage)
+ * - Vault shares denominated in GBP value
+ */
+contract GBPYieldVaultV2 is ERC4626, Ownable, Pausable {
+    using SafeERC20 for IERC20;
+
+    // ============ State Variables ============
+
+    /// @notice Active lending strategy
+    IYieldStrategy public activeStrategy;
+
+    /// @notice Pending strategy (during timelock)
+    IYieldStrategy public pendingStrategy;
+
+    /// @notice Timestamp when pending strategy can be activated
+    uint256 public strategyChangeTimestamp;
+
+    /// @notice Timelock duration for strategy changes (24 hours)
+    uint256 public constant STRATEGY_TIMELOCK = 24 hours;
+
+    /// @notice Perpetual position manager (manages GBP/USD position)
+    PerpPositionManager public perpManager;
+
+    /// @notice Chainlink oracle for GBP/USD pricing
+    ChainlinkOracle public oracle;
+
+    /// @notice Allocation to lending strategy (basis points, e.g., 9000 = 90%)
+    uint256 public yieldAllocation;
+
+    /// @notice Allocation to perp strategy (basis points, e.g., 1000 = 10%)
+    uint256 public perpAllocation;
+
+    /// @notice Target leverage for perp position
+    uint256 public targetLeverage;
+
+    /// @notice Basis points denominator
+    uint256 private constant BPS = 10000;
+
+    // ============ Events ============
+
+    event StrategyProposed(address indexed oldStrategy, address indexed newStrategy, uint256 activationTime);
+    event StrategyChanged(address indexed oldStrategy, address indexed newStrategy, uint256 migratedAmount);
+    event StrategyProposalCancelled(address indexed cancelledStrategy);
+    event AllocationsUpdated(uint256 yieldAllocation, uint256 perpAllocation);
+    event LeverageUpdated(uint256 oldLeverage, uint256 newLeverage);
+
+    // ============ Errors ============
+
+    error InvalidAllocation();
+    error InvalidLeverage();
+    error ZeroAddress();
+    error ZeroDeposit();
+    error TimelockNotExpired();
+    error NoPendingStrategy();
+    error StrategyMigrationFailed();
+
+    /**
+     * @notice Constructor
+     * @param _asset USDC token address
+     * @param _name Vault name
+     * @param _symbol Vault symbol
+     * @param _initialStrategy Initial lending strategy (e.g., MorphoStrategyAdapter)
+     * @param _perpManager Perpetual position manager
+     * @param _oracle Chainlink oracle
+     * @param _yieldAllocation Initial yield allocation (9000 = 90%)
+     * @param _perpAllocation Initial perp allocation (1000 = 10%)
+     * @param _targetLeverage Initial leverage (10 = 10x)
+     */
+    constructor(
+        address _asset,
+        string memory _name,
+        string memory _symbol,
+        address _initialStrategy,
+        address _perpManager,
+        address _oracle,
+        uint256 _yieldAllocation,
+        uint256 _perpAllocation,
+        uint256 _targetLeverage
+    ) ERC4626(IERC20(_asset)) ERC20(_name, _symbol) Ownable(msg.sender) {
+        if (_initialStrategy == address(0)) revert ZeroAddress();
+        if (_perpManager == address(0)) revert ZeroAddress();
+        if (_oracle == address(0)) revert ZeroAddress();
+        if (_yieldAllocation + _perpAllocation != BPS) revert InvalidAllocation();
+        if (_targetLeverage == 0) revert InvalidLeverage();
+
+        activeStrategy = IYieldStrategy(_initialStrategy);
+        perpManager = PerpPositionManager(_perpManager);
+        oracle = ChainlinkOracle(_oracle);
+        yieldAllocation = _yieldAllocation;
+        perpAllocation = _perpAllocation;
+        targetLeverage = _targetLeverage;
+
+        // Transfer ownership of PerpPositionManager to this vault
+        perpManager.transferOwnership(address(this));
+    }
+
+    // ============ Strategy Management ============
+
+    /**
+     * @notice Propose a new lending strategy (step 1 of 2)
+     * @param newStrategy Address of the new strategy contract
+     * @dev Initiates 24-hour timelock before strategy can be changed
+     */
+    function proposeStrategyChange(address newStrategy) external onlyOwner {
+        if (newStrategy == address(0)) revert ZeroAddress();
+        if (newStrategy == address(activeStrategy)) revert ZeroAddress();
+
+        pendingStrategy = IYieldStrategy(newStrategy);
+        strategyChangeTimestamp = block.timestamp + STRATEGY_TIMELOCK;
+
+        emit StrategyProposed(address(activeStrategy), newStrategy, strategyChangeTimestamp);
+    }
+
+    /**
+     * @notice Cancel a pending strategy proposal
+     */
+    function cancelStrategyProposal() external onlyOwner {
+        if (address(pendingStrategy) == address(0)) revert NoPendingStrategy();
+
+        address cancelled = address(pendingStrategy);
+        pendingStrategy = IYieldStrategy(address(0));
+        strategyChangeTimestamp = 0;
+
+        emit StrategyProposalCancelled(cancelled);
+    }
+
+    /**
+     * @notice Execute strategy change (step 2 of 2)
+     * @dev Migrates all funds from old strategy to new strategy after timelock expires
+     */
+    function executeStrategyChange() external onlyOwner {
+        if (address(pendingStrategy) == address(0)) revert NoPendingStrategy();
+        if (block.timestamp < strategyChangeTimestamp) revert TimelockNotExpired();
+
+        IYieldStrategy oldStrategy = activeStrategy;
+        IYieldStrategy newStrategy = pendingStrategy;
+
+        // Withdraw all from old strategy
+        uint256 amount = oldStrategy.withdrawAll();
+
+        // Approve new strategy and deposit
+        IERC20(asset()).forceApprove(address(newStrategy), amount);
+        uint256 deposited = newStrategy.deposit(amount);
+
+        if (deposited == 0) revert StrategyMigrationFailed();
+
+        // Activate new strategy
+        activeStrategy = newStrategy;
+        pendingStrategy = IYieldStrategy(address(0));
+        strategyChangeTimestamp = 0;
+
+        emit StrategyChanged(address(oldStrategy), address(newStrategy), amount);
+    }
+
+    /**
+     * @notice Get info about active and pending strategies
+     * @return activeName Name of active strategy
+     * @return activeProtocol Protocol name (e.g., "Morpho")
+     * @return activeAPY Current APY in basis points
+     * @return hasPending Whether there's a pending strategy
+     * @return pendingName Name of pending strategy (if any)
+     * @return timeUntilActivation Seconds until pending can be activated (0 if ready)
+     */
+    function getStrategyInfo() external view returns (
+        string memory activeName,
+        string memory activeProtocol,
+        uint256 activeAPY,
+        bool hasPending,
+        string memory pendingName,
+        uint256 timeUntilActivation
+    ) {
+        (activeName, activeProtocol, ,) = activeStrategy.getMetadata();
+        activeAPY = activeStrategy.currentAPY();
+
+        hasPending = address(pendingStrategy) != address(0);
+        if (hasPending) {
+            (pendingName, , ,) = pendingStrategy.getMetadata();
+            if (block.timestamp < strategyChangeTimestamp) {
+                timeUntilActivation = strategyChangeTimestamp - block.timestamp;
+            }
+        }
+    }
+
+    // ============ ERC4626 Overrides (Modified for Strategy) ============
+
+    /**
+     * @notice Deposit assets and receive vault shares
+     * @param assets Amount of USDC to deposit
+     * @param receiver Address to receive shares
+     * @return shares Amount of shares minted
+     */
+    function deposit(uint256 assets, address receiver)
+        public
+        override
+        whenNotPaused
+        returns (uint256 shares)
+    {
+        if (assets == 0) revert ZeroDeposit();
+
+        // Calculate shares to mint
+        shares = previewDeposit(assets);
+
+        // Transfer USDC from user
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
+
+        // Split allocation: 90% to lending strategy, 10% to perp
+        uint256 yieldAmount = (assets * yieldAllocation) / BPS;
+        uint256 perpAmount = assets - yieldAmount;
+
+        // Deposit into lending strategy (e.g., Morpho)
+        IERC20(asset()).forceApprove(address(activeStrategy), yieldAmount);
+        activeStrategy.deposit(yieldAmount);
+
+        // Open/increase perp position
+        IERC20(asset()).forceApprove(address(perpManager), perpAmount);
+        perpManager.increasePosition(perpAmount, targetLeverage);
+
+        // Mint shares to receiver
+        _mint(receiver, shares);
+
+        emit Deposit(msg.sender, receiver, assets, shares);
+    }
+
+    /**
+     * @notice Redeem shares for assets
+     * @param shares Amount of shares to burn
+     * @param receiver Address to receive assets
+     * @param owner Address that owns the shares
+     * @return assets Amount of USDC returned
+     */
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override
+        whenNotPaused
+        returns (uint256 assets)
+    {
+        // Check allowance if not owner
+        if (msg.sender != owner) {
+            uint256 allowed = allowance(owner, msg.sender);
+            if (allowed != type(uint256).max) {
+                _approve(owner, msg.sender, allowed - shares);
+            }
+        }
+
+        // Calculate assets to return
+        assets = previewRedeem(shares);
+
+        // Burn shares
+        _burn(owner, shares);
+
+        // Calculate proportional withdrawal from each strategy
+        uint256 yieldWithdraw = (assets * yieldAllocation) / BPS;
+        uint256 perpWithdraw = assets - yieldWithdraw;
+
+        // Withdraw from lending strategy
+        uint256 yieldReceived = activeStrategy.withdraw(yieldWithdraw);
+
+        // Reduce perp position
+        uint256 perpReceived = perpManager.withdrawCollateral(perpWithdraw);
+
+        // Total received
+        uint256 totalReceived = yieldReceived + perpReceived;
+
+        // Transfer USDC to receiver
+        IERC20(asset()).safeTransfer(receiver, totalReceived);
+
+        emit Withdraw(msg.sender, receiver, owner, totalReceived, shares);
+        return totalReceived;
+    }
+
+    /**
+     * @notice Get total assets under management
+     * @return Total USDC value (strategy + perp)
+     */
+    function totalAssets() public view override returns (uint256) {
+        uint256 strategyAssets = activeStrategy.totalAssets();
+        uint256 perpAssets = perpManager.getPositionValue();
+        return strategyAssets + perpAssets;
+    }
+
+    // ============ GBP Pricing Functions ============
+
+    /**
+     * @notice Get total assets denominated in GBP
+     * @return Total GBP value (18 decimals)
+     */
+    function totalAssetsGBP() public view returns (uint256) {
+        uint256 usdcAmount = totalAssets(); // 6 decimals
+        uint256 gbpPrice = oracle.getGBPUSDPrice(); // 8 decimals
+        return (usdcAmount * 1e20) / gbpPrice; // Scale to 18 decimals
+    }
+
+    /**
+     * @notice Get share price in GBP
+     * @return Price per share in GBP (18 decimals)
+     */
+    function sharePriceGBP() public view returns (uint256) {
+        uint256 supply = totalSupply();
+        if (supply == 0) return 1e18;
+        return (totalAssetsGBP() * 1e18) / supply;
+    }
+
+    // ============ Admin Functions ============
+
+    /**
+     * @notice Update yield/perp allocation split
+     * @param _yieldAllocation New yield allocation (basis points)
+     * @param _perpAllocation New perp allocation (basis points)
+     */
+    function setAllocations(uint256 _yieldAllocation, uint256 _perpAllocation)
+        external
+        onlyOwner
+    {
+        if (_yieldAllocation + _perpAllocation != BPS) revert InvalidAllocation();
+        yieldAllocation = _yieldAllocation;
+        perpAllocation = _perpAllocation;
+        emit AllocationsUpdated(_yieldAllocation, _perpAllocation);
+    }
+
+    /**
+     * @notice Update target leverage for perp positions
+     * @param _targetLeverage New leverage (10 = 10x)
+     */
+    function setTargetLeverage(uint256 _targetLeverage) external onlyOwner {
+        if (_targetLeverage == 0) revert InvalidLeverage();
+        uint256 oldLeverage = targetLeverage;
+        targetLeverage = _targetLeverage;
+        emit LeverageUpdated(oldLeverage, _targetLeverage);
+    }
+
+    /**
+     * @notice Pause deposits and withdrawals
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause deposits and withdrawals
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /**
+     * @notice Emergency withdraw from strategy (owner only)
+     * @dev Use only in case of strategy failure
+     */
+    function emergencyWithdrawStrategy() external onlyOwner returns (uint256) {
+        return activeStrategy.emergencyWithdraw();
+    }
+}

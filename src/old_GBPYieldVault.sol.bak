@@ -1,0 +1,392 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./interfaces/IYieldStrategy.sol";
+import "./PerpPositionManager.sol";
+import "./ChainlinkOracle.sol";
+import "./libraries/NAVCalculator.sol";
+
+/**
+ * @title GBPYieldVault
+ * @notice ERC4626 vault that provides GBP-denominated yield through USD strategies + GBP/USD perp hedging
+ * @dev ALL operations are atomic - deposits and withdrawals happen in single transactions
+ */
+contract GBPYieldVault is ERC4626, Ownable, Pausable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+    using NAVCalculator for uint256;
+
+    /// @notice The yield strategy (e.g., Aave)
+    IYieldStrategy public yieldStrategy;
+
+    /// @notice The perpetual position manager
+    PerpPositionManager public perpManager;
+
+    /// @notice The Chainlink oracle for GBP/USD prices
+    ChainlinkOracle public oracle;
+
+    /// @notice Percentage of deposits allocated to yield strategy (in basis points, e.g., 8000 = 80%)
+    uint256 public yieldAllocation;
+
+    /// @notice Percentage of deposits used as perp collateral (in basis points, e.g., 2000 = 20%)
+    uint256 public perpAllocation;
+
+    /// @notice Target leverage for perp positions (e.g., 5 means 5x leverage)
+    uint256 public targetLeverage;
+
+    /// @notice Performance fee (in basis points, e.g., 1000 = 10%)
+    uint256 public performanceFee;
+
+    /// @notice Fee recipient address
+    address public feeRecipient;
+
+    /// @notice High water mark for performance fees (in GBP terms per share)
+    uint256 public highWaterMark;
+
+    uint256 private constant BASIS_POINTS = 10000;
+    uint256 private constant SHARE_PRECISION = 1e18;
+
+
+    /// @notice Emitted when allocations are updated
+    event AllocationsUpdated(uint256 yieldAllocation, uint256 perpAllocation);
+
+    /// @notice Emitted when target leverage is updated
+    event TargetLeverageUpdated(uint256 oldLeverage, uint256 newLeverage);
+
+    /// @notice Emitted when performance fee is collected
+    event PerformanceFeeCollected(uint256 amount, address recipient);
+
+    error InvalidAllocation();
+    error InvalidLeverage();
+    error InvalidAddress();
+    error DepositFailed();
+    error WithdrawFailed();
+
+    /**
+     * @notice Constructor
+     * @param _asset Address of the underlying asset (e.g., USDC)
+     * @param _name Name of the vault token
+     * @param _symbol Symbol of the vault token
+     * @param _yieldStrategy Address of the yield strategy
+     * @param _perpManager Address of the perp position manager
+     * @param _oracle Address of the Chainlink oracle
+     * @param _yieldAllocation Initial yield allocation (basis points)
+     * @param _perpAllocation Initial perp allocation (basis points)
+     * @param _targetLeverage Initial target leverage
+     */
+    constructor(
+        address _asset,
+        string memory _name,
+        string memory _symbol,
+        address _yieldStrategy,
+        address _perpManager,
+        address _oracle,
+        uint256 _yieldAllocation,
+        uint256 _perpAllocation,
+        uint256 _targetLeverage
+    ) ERC4626(IERC20(_asset)) ERC20(_name, _symbol) Ownable(msg.sender) {
+        require(_yieldStrategy != address(0), "Invalid yield strategy");
+        require(_perpManager != address(0), "Invalid perp manager");
+        require(_oracle != address(0), "Invalid oracle");
+        require(_yieldAllocation + _perpAllocation == BASIS_POINTS, "Allocations must sum to 100%");
+        require(_targetLeverage > 0, "Invalid leverage");
+
+        yieldStrategy = IYieldStrategy(_yieldStrategy);
+        perpManager = PerpPositionManager(_perpManager);
+        oracle = ChainlinkOracle(_oracle);
+        yieldAllocation = _yieldAllocation;
+        perpAllocation = _perpAllocation;
+        targetLeverage = _targetLeverage;
+        feeRecipient = msg.sender;
+        highWaterMark = SHARE_PRECISION; // Start at 1:1
+    }
+
+    /**
+     * @notice ATOMIC deposit function
+     * @dev Deposits USDC, allocates to yield strategy, opens perp position, all in one transaction
+     * @param assets Amount of assets to deposit
+     * @param receiver Address to receive vault shares
+     * @return shares Number of shares minted
+     */
+    function deposit(uint256 assets, address receiver)
+        public
+        override
+        whenNotPaused
+        nonReentrant
+        returns (uint256 shares)
+    {
+        require(assets > 0, "Zero deposit");
+        require(receiver != address(0), "Invalid receiver");
+
+        // Get current state before deposit
+        uint256 totalAssetsBefore = totalAssets();
+        uint256 totalSharesBefore = totalSupply();
+        uint256 gbpUsdPrice = oracle.getGBPUSDPrice();
+
+        // Calculate shares to mint (GBP-denominated)
+        shares = NAVCalculator.calculateSharesForDeposit(
+            assets,
+            totalAssetsBefore,
+            totalSharesBefore,
+            gbpUsdPrice,
+            _assetDecimals()
+        );
+
+        require(shares > 0, "Zero shares");
+
+        // Transfer assets from user to vault
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
+
+        // Calculate allocations
+        uint256 yieldAmount = (assets * yieldAllocation) / BASIS_POINTS;
+        uint256 perpCollateral = (assets * perpAllocation) / BASIS_POINTS;
+
+        // 1. Deploy to yield strategy
+        if (yieldAmount > 0) {
+            IERC20(asset()).forceApprove(address(yieldStrategy), yieldAmount);
+            yieldStrategy.deposit(yieldAmount);
+        }
+
+        // 2. Open/increase perp position
+        if (perpCollateral > 0) {
+            // Notional size = total deposit amount (for full hedging)
+            uint256 notionalSize = assets;
+
+            IERC20(asset()).forceApprove(address(perpManager), perpCollateral);
+            perpManager.increasePosition(notionalSize, perpCollateral);
+        }
+
+        // 3. Mint shares to receiver
+        _mint(receiver, shares);
+
+        // Deposit event inherited from ERC4626
+
+        return shares;
+    }
+
+    /**
+     * @notice ATOMIC withdraw function
+     * @dev Burns shares, closes perp position, withdraws from yield, all in one transaction
+     * @param assets Amount of assets to withdraw
+     * @param receiver Address to receive assets
+     * @param owner Owner of the shares
+     * @return shares Number of shares burned
+     */
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override
+        whenNotPaused
+        nonReentrant
+        returns (uint256 shares)
+    {
+        require(assets > 0, "Zero withdrawal");
+        require(receiver != address(0), "Invalid receiver");
+
+        // Calculate shares needed
+        uint256 totalAssetsBefore = totalAssets();
+        uint256 totalSharesBefore = totalSupply();
+
+        shares = NAVCalculator.calculateSharesForDeposit(
+            assets,
+            totalAssetsBefore,
+            totalSharesBefore,
+            oracle.getGBPUSDPrice(),
+            _assetDecimals()
+        );
+
+        return _withdraw(shares, receiver, owner, assets);
+    }
+
+    /**
+     * @notice Redeem shares for assets
+     * @param shares Number of shares to redeem
+     * @param receiver Address to receive assets
+     * @param owner Owner of the shares
+     * @return assets Amount of assets returned
+     */
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override
+        whenNotPaused
+        nonReentrant
+        returns (uint256 assets)
+    {
+        require(shares > 0, "Zero redemption");
+        require(receiver != address(0), "Invalid receiver");
+
+        // Calculate assets to return
+        uint256 totalAssetsBefore = totalAssets();
+        uint256 totalSharesBefore = totalSupply();
+
+        assets = NAVCalculator.calculateAssetsForShares(shares, totalAssetsBefore, totalSharesBefore);
+
+        return _withdraw(shares, receiver, owner, assets);
+    }
+
+    /**
+     * @notice Internal withdraw logic
+     */
+    function _withdraw(uint256 shares, address receiver, address owner, uint256 assets)
+        internal
+        returns (uint256)
+    {
+        // Check allowance if not owner
+        if (msg.sender != owner) {
+            _spendAllowance(owner, msg.sender, shares);
+        }
+
+        // Calculate share ratio
+        uint256 totalSharesBefore = totalSupply();
+        uint256 shareRatio = (shares * SHARE_PRECISION) / totalSharesBefore;
+
+        // 1. Burn shares
+        _burn(owner, shares);
+
+        // 2. Close proportional perp position
+        perpManager.decreasePosition(shareRatio);
+
+        // 3. Withdraw from yield strategy
+        yieldStrategy.withdraw(shareRatio);
+
+        // 4. Transfer all collected assets to receiver
+        uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
+        require(vaultBalance >= assets, "Insufficient assets");
+
+        IERC20(asset()).safeTransfer(receiver, assets);
+
+        // Withdraw event inherited from ERC4626
+
+        return assets;
+    }
+
+    /**
+     * @notice Calculate total assets under management
+     * @return Total assets in USD
+     */
+    function totalAssets() public view override returns (uint256) {
+        // Sum of:
+        // 1. Idle assets in vault
+        uint256 idle = IERC20(asset()).balanceOf(address(this));
+
+        // 2. Assets in yield strategy
+        uint256 inYield = yieldStrategy.totalAssets();
+
+        // 3. Collateral in perp position
+        (, uint256 perpCollateral,) = perpManager.getPositionDetails();
+
+        // 4. Perp P&L (can be negative)
+        int256 perpPnL = perpManager.getPositionPnL();
+
+        uint256 total = idle + inYield + perpCollateral;
+
+        // Add or subtract P&L
+        if (perpPnL >= 0) {
+            total += uint256(perpPnL);
+        } else {
+            uint256 loss = uint256(-perpPnL);
+            total = total > loss ? total - loss : 0;
+        }
+
+        return total;
+    }
+
+    /**
+     * @notice Get NAV in GBP terms
+     * @return Total NAV in GBP value
+     */
+    function totalAssetsGBP() external view returns (uint256) {
+        uint256 totalUSD = totalAssets();
+        uint256 gbpUsdPrice = oracle.getGBPUSDPrice();
+        return NAVCalculator.convertUSDtoGBP(totalUSD, gbpUsdPrice, _assetDecimals());
+    }
+
+    /**
+     * @notice Get share price in GBP terms
+     * @return Price per share in GBP (1e18 precision)
+     */
+    function sharePriceGBP() external view returns (uint256) {
+        uint256 totalUSD = totalAssets();
+        uint256 totalShares = totalSupply();
+        uint256 gbpUsdPrice = oracle.getGBPUSDPrice();
+
+        return NAVCalculator.calculateSharePrice(totalUSD, totalShares, gbpUsdPrice, _assetDecimals());
+    }
+
+    /**
+     * @notice Update yield and perp allocations
+     * @param newYieldAllocation New yield allocation (basis points)
+     * @param newPerpAllocation New perp allocation (basis points)
+     */
+    function setAllocations(uint256 newYieldAllocation, uint256 newPerpAllocation) external onlyOwner {
+        if (newYieldAllocation + newPerpAllocation != BASIS_POINTS) revert InvalidAllocation();
+
+        yieldAllocation = newYieldAllocation;
+        perpAllocation = newPerpAllocation;
+
+        emit AllocationsUpdated(newYieldAllocation, newPerpAllocation);
+    }
+
+    /**
+     * @notice Update target leverage
+     * @param newLeverage New target leverage
+     */
+    function setTargetLeverage(uint256 newLeverage) external onlyOwner {
+        if (newLeverage == 0) revert InvalidLeverage();
+
+        uint256 oldLeverage = targetLeverage;
+        targetLeverage = newLeverage;
+
+        emit TargetLeverageUpdated(oldLeverage, newLeverage);
+    }
+
+    /**
+     * @notice Update performance fee
+     * @param newFee New performance fee (basis points)
+     */
+    function setPerformanceFee(uint256 newFee) external onlyOwner {
+        require(newFee <= 2000, "Fee too high"); // Max 20%
+        performanceFee = newFee;
+    }
+
+    /**
+     * @notice Update fee recipient
+     * @param newRecipient New fee recipient address
+     */
+    function setFeeRecipient(address newRecipient) external onlyOwner {
+        if (newRecipient == address(0)) revert InvalidAddress();
+        feeRecipient = newRecipient;
+    }
+
+    /**
+     * @notice Pause the vault
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the vault
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /**
+     * @notice Get asset decimals
+     */
+    function _assetDecimals() internal view returns (uint8) {
+        return ERC20(asset()).decimals();
+    }
+
+    /**
+     * @notice Override decimals to use GBP-based precision
+     */
+    function decimals() public pure override returns (uint8) {
+        return 18; // Standard 18 decimals for shares
+    }
+}
