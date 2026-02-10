@@ -32,7 +32,7 @@ export default function StakingPage() {
       {/* Main Content */}
       <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-80px)] md:min-h-[calc(100vh-80px)] px-4 py-12 pb-24 md:pb-12">
         {/* Glass Morphism Card */}
-        <div className="glass-card w-full max-w-md p-6 md:p-8 rounded-3xl relative">
+        <div className="glass-card w-full max-w-md p-6 md:p-8 rounded-3xl relative pt-16">
           {/* Theme Toggle */}
           <ThemeToggle />
 
