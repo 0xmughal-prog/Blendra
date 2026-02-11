@@ -77,7 +77,7 @@ export default function Home() {
                   : 'bg-white/5 text-white/60 border-2 border-white/10 hover:bg-white/10 hover:text-white/80'
               }`}
             >
-              Mint
+              Mint GBPb
             </button>
             <button
               onClick={() => setActiveAction('redeem')}
